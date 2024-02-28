@@ -1,0 +1,66 @@
+From 3d70d8f5534392ff3d6cea3afc0a75940b0f7451 Mon Sep 17 00:00:00 2001
+From: myusername <myemail@example.com>
+Date: Wed, 17 May 2023 17:26:04 -0400
+Subject: [PATCH 1/2] adding import symbole roles to occurences created by
+ visiting import related nodes
+
+---
+ packages/pyright-scip/src/treeVisitor.ts | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/packages/pyright-scip/src/treeVisitor.ts b/packages/pyright-scip/src/treeVisitor.ts
+index 42fcd79e7..c757a9127 100644
+--- a/packages/pyright-scip/src/treeVisitor.ts
++++ b/packages/pyright-scip/src/treeVisitor.ts
+@@ -485,7 +485,7 @@ export class TreeVisitor extends ParseTreeWalker {
+         const symbol = this.getScipSymbol(node);
+         this.document.occurrences.push(
+             new scip.Occurrence({
+-                symbol_roles: scip.SymbolRole.ReadAccess,
++                symbol_roles: scip.SymbolRole.Import | scip.SymbolRole.ReadAccess,
+                 symbol: symbol.value,
+                 range: parseNodeToRange(node.module, this.fileInfo!.lines).toLsif(),
+             })
+@@ -500,7 +500,8 @@ export class TreeVisitor extends ParseTreeWalker {
+     }
+ 
+     override visitImportFromAs(node: ImportFromAsNode): boolean {
+-        this.pushNewOccurrence(node, this.getScipSymbol(node));
++        const roles = scip.SymbolRole.Import | scip.SymbolRole.ReadAccess;
++        this.pushNewOccurrence(node, this.getScipSymbol(node), roles);
+         return false;
+     }
+ 
+@@ -510,19 +511,20 @@ export class TreeVisitor extends ParseTreeWalker {
+     override visitImportAs(node: ImportAsNode): boolean {
+         const moduleName = _formatModuleName(node.module);
+         const importInfo = getImportInfo(node.module);
++        const roles = scip.SymbolRole.Import | scip.SymbolRole.ReadAccess;
+         if (
+             importInfo &&
+             importInfo.resolvedPaths[0] &&
+             path.resolve(importInfo.resolvedPaths[0]).startsWith(this.cwd)
+         ) {
+             const symbol = Symbols.makeModuleInit(this.projectPackage, moduleName);
+-            this.pushNewOccurrence(node.module, symbol);
++            this.pushNewOccurrence(node.module, symbol, roles);
+         } else {
+             const pythonPackage = this.moduleNameNodeToPythonPackage(node.module);
+ 
+             if (pythonPackage) {
+                 const symbol = Symbols.makeModuleInit(pythonPackage, moduleName);
+-                this.pushNewOccurrence(node.module, symbol);
++                this.pushNewOccurrence(node.module, symbol, roles);
+             } else {
+                 // For python packages & modules that we cannot resolve,
+                 // we'll just make a local for the file and note that we could not resolve this module.
+@@ -534,7 +536,7 @@ export class TreeVisitor extends ParseTreeWalker {
+                 const symbol = this.getLocalForDeclaration(node, [
+                     `(module): ${moduleName} [unable to resolve module]`,
+                 ]);
+-                this.pushNewOccurrence(node.module, symbol);
++                this.pushNewOccurrence(node.module, symbol, roles);
+             }
+         }
+ 
+
