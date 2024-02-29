@@ -1,5 +1,6 @@
 import * as child_process from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
 import * as TOML from '@iarna/toml';
 import { Event } from 'vscode-languageserver/lib/common/api';
 
@@ -225,6 +226,7 @@ export class Indexer {
                 const filepath = sourceFile.getFilePath();
                 let doc = new scip.Document({
                     relative_path: path.relative(this.getProjectRoot(), filepath),
+                    text: fs.readFileSync(filepath, 'utf-8'),
                 });
 
                 const parseResults = sourceFile.getParseResults();
